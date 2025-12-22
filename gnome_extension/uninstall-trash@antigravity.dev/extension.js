@@ -4,6 +4,8 @@ import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Shell from 'gi://Shell';
 
+import Clutter from 'gi://Clutter';
+
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
@@ -21,6 +23,19 @@ const UninstallDropTarget = GObject.registerClass(
                 style_class: 'system-status-icon',
             });
             this.add_child(this._icon);
+
+            // Open Trash on Click
+            this.connect('button-press-event', (actor, event) => {
+                if (event.get_button() === 1) { // Left click
+                    try {
+                        Gio.AppInfo.launch_default_for_uri("trash:///", null);
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    return Clutter.EVENT_STOP;
+                }
+                return Clutter.EVENT_PROPAGATE;
+            });
         }
 
         handleDragOver(source, _actor, _x, _y, _time) {
