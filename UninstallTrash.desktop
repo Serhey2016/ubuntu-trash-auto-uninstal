@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Uninstall Trash
+Comment=Drag applications here to uninstall them
+Exec=/home/dev/Documents/autoremove/uninstall_trash.py
+Icon=user-trash
+Terminal=false
+Type=Application
+Categories=Utility;
+StartupNotify=true
+
+
+
