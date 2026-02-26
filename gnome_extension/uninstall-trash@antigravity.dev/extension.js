@@ -23,6 +23,7 @@ const UninstallDropTarget = GObject.registerClass(
                 style_class: 'system-status-icon',
             });
             this.add_child(this._icon);
+            this._delegate = this; // Needed for DND
 
             // Open Trash on Click
             this.connect('button-press-event', (actor, event) => {
@@ -39,34 +40,45 @@ const UninstallDropTarget = GObject.registerClass(
         }
 
         handleDragOver(source, _actor, _x, _y, _time) {
-            // source.app is usually present for AppIcon drags from the grid
-            if (source && source.app) {
-                this._icon.icon_name = 'user-trash-full-symbolic';
-                return DND.DragMotionResult.COPY_DROP;
-            }
+            this._icon.icon_name = 'user-trash-full-symbolic';
+            return DND.DragMotionResult.COPY_DROP;
+        }
+
+        handleDragOut() {
             this._icon.icon_name = 'user-trash-symbolic';
-            // Even if we return NO_DROP, sometimes it's good to reset icon just in case
-            return DND.DragMotionResult.NO_DROP;
         }
 
         acceptDrop(source, _actor, _x, _y, _time) {
             this._icon.icon_name = 'user-trash-symbolic';
 
-            if (source && source.app) {
-                let id = source.app.get_id(); // e.g., 'org.gnome.Calculator.desktop' or 'firefox_firefox.desktop'
+            console.warn(`acceptDrop called with source: ${source}`);
+            if (source) {
+                let keys = [];
+                for (let k in source) { keys.push(k); }
+                console.warn(`source keys: ${keys.join(', ')}`);
 
-                try {
-                    // Using Gio.Subprocess is the modern way in GNOME 45+
-                    let proc = Gio.Subprocess.new(
-                        ['/usr/bin/python3', this._scriptPath, id],
-                        Gio.SubprocessFlags.NONE
-                    );
-                } catch (e) {
-                    console.error(`Uninstall Trash Error: ${e}`);
+                if (source.app) {
+                    let id = source.app.get_id();
+                    try {
+                        Gio.Subprocess.new(
+                            ['/usr/bin/python3', this._scriptPath, id],
+                            Gio.SubprocessFlags.NONE
+                        );
+                    } catch (e) {
+                        console.error(`Uninstall Trash Error: ${e}`);
+                    }
+                    return false;
+                } else {
+                    // It's a file or something else
+                    console.warn(`Nautilus or external drop detected. URIs:`);
+                    if (source.get_uris) console.warn(source.get_uris().join(', '));
+                    if (source.uris) console.warn(source.uris.join(', '));
+
+                    // Actually delete the file using Gio
+                    // We will implement actual deletion once we know the format
                 }
-                return true;
             }
-            return false;
+            return false; // Return false to bypass problematic GNOME Shell drop animation
         }
     });
 
